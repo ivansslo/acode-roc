@@ -35,7 +35,7 @@ body:
       label: If applicable, attach your Acode.log file to this issue.
       description: |
         Search for `Open Log File` in Acode command palette, it will open Acode.log file then share it
-        or Check this location for log file: `/storage/emulated/0/Android/com.foxdebug.acode{in case of free version there will be bit more}/files/Acode.log`
+        or Check this location for log file: `/storage/emulated/0/Android/com.rocdebug.acode{in case of free version there will be bit more}/files/Acode.log`
       value: |
         <details><summary>Acode.log</summary><pre>
         <!-- Click below this line and paste or drag-and-drop your log-->

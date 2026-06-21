@@ -84,12 +84,12 @@ jobs:
         run: |
           keytool -genkeypair -v \
             -keystore rocdex-release.keystore \
-            -storepass rocdex2024 \
+            -storepass rocdex2026 \
             -alias rocdex \
-            -keypass rocdex2024 \
+            -keypass rocdex2026 \
             -keyalg RSA -keysize 2048 -validity 10000 \
             -dname "CN=Rocdex,OU=Dev,O=Rocdex,L=Jakarta,ST=ID,C=ID"
-          echo '{ "android": { "release": { "keystore": "rocdex-release.keystore", "storePassword": "rocdex2024", "alias": "rocdex", "password": "rocdex2024" } } }' > build.json
+          echo '{ "android": { "release": { "keystore": "rocdex-release.keystore", "storePassword": "rocdex2026", "alias": "rocdex", "password": "rocdex2026" } } }' > build.json
 
       - name: Build APK
         run: |

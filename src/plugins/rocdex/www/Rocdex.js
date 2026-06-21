@@ -1,7 +1,7 @@
 /**
  * Rocdex Cordova Plugin — JavaScript API
  *
- * Provides access to the Codex CLI web interface manager.
+ * Provides access to the Codex CLI web interface manager and license system.
  */
 const exec = (action, args = []) =>
   new Promise((resolve, reject) => {
@@ -20,7 +20,7 @@ const Rocdex = {
   /**
    * Start the codexapp server on the given port.
    * @param {number} [port=18923]
-   * @returns {Promise<{ port: number, pid: number }>}
+   * @returns {Promise<{ port: number }>}
    */
   startServer(port = 18923) {
     return exec("startServer", [port]);
@@ -56,6 +56,32 @@ const Rocdex = {
    */
   installCodexapp() {
     return exec("installCodexapp");
+  },
+
+  /**
+   * Check if a valid license is installed.
+   * @returns {Promise<{ valid: boolean, licensedUser?: string }>}
+   */
+  checkLicense() {
+    return exec("checkLicense");
+  },
+
+  /**
+   * Activate license with a key.
+   * Format: "user|signature_hex"
+   * @param {string} licenseKey
+   * @returns {Promise<{ valid: boolean, licensedUser?: string, message?: string }>}
+   */
+  setLicense(licenseKey) {
+    return exec("setLicense", [licenseKey]);
+  },
+
+  /**
+   * Get current license info.
+   * @returns {Promise<{ valid: boolean, licensedUser?: string, packageName?: string }>}
+   */
+  getLicenseInfo() {
+    return exec("getLicenseInfo");
   },
 };
 

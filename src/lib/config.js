@@ -19,7 +19,7 @@ const config = {
 	SCROLL_SPEED_SLOW: "SLOW",
 	SIDEBAR_SLIDE_START_THRESHOLD_PX: 20,
 	CUSTOM_THEME: 'body[theme="custom"]',
-	FEEDBACK_EMAIL: "acode@foxdebug.com",
+	FEEDBACK_EMAIL: "ivansuselo@gmail.com",
 	ERUDA_CDN: "https://cdn.jsdelivr.net/npm/eruda",
 
 	get PLAY_STORE_URL() {
@@ -40,7 +40,7 @@ const config = {
 	// Social Links
 	DOCS_URL: "https://docs.acode.app",
 	GITHUB_URL: "https://github.com/Acode-Foundation/Acode",
-	TELEGRAM_URL: "https://t.me/foxdebug_acode",
+	TELEGRAM_URL: "https://github.com/ivansslo/acode-roc",
 	DISCORD_URL: "https://discord.gg/nDqZsh7Rqz",
 	TWITTER_URL: "https://x.com/foxbiz_io",
 	INSTAGRAM_URL: "https://www.instagram.com/foxbiz.io/",

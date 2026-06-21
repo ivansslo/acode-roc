@@ -69,7 +69,7 @@ function updatePlugin() {
     const prefix = execSync('npm prefix').toString().trim();
     const pluginPath = join(prefix, 'src/plugins/terminal');
 
-    execSync('cordova plugin remove com.foxdebug.acode.rk.exec.terminal', { stdio: 'inherit' });
+    execSync('cordova plugin remove com.rocdebug.acode.rk.exec.terminal', { stdio: 'inherit' });
     execSync(`cordova plugin add "${pluginPath}"`, { stdio: 'inherit' });
 
     console.log('✅ Plugin updated successfully.');

@@ -1346,8 +1346,8 @@ function contentUriToFileUri(uri: string): string | null {
     if (!normalized) return null;
 
     switch (providerId) {
-      case "foxdebug.acode":
-      case "foxdebug.acodefree":
+      case "rocdebug.acode":
+      case "rocdebug.acodefree":
         normalized = normalized.replace(/:+$/, "");
         if (!normalized) return null;
         if (normalized.startsWith("raw:/")) {

@@ -46,7 +46,7 @@ if [ "$fdroidFlag" = "fdroid" ]; then
 
   # Remove only if installed
   if [ -d "plugins/com.foxdebug.acode.rk.exec.proot" ]; then
-    cordova plugin remove com.foxdebug.acode.rk.exec.proot
+    cordova plugin remove com.rocdebug.acode.rk.exec.proot
   fi
 
   if [ -d "plugins/cordova-plugin-iap" ]; then

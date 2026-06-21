@@ -1,5 +1,7 @@
 package com.foxdebug.acode.rk.rocdex;
 
+import android.content.SharedPreferences;
+import android.provider.Settings;
 import android.util.Log;
 
 import java.io.BufferedReader;
@@ -7,6 +9,8 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.security.MessageDigest;
+import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -20,10 +24,7 @@ import org.json.JSONObject;
 /**
  * Rocdex Cordova Plugin
  *
- * Manages the codexapp (Codex CLI web UI) lifecycle:
- * - Check Node.js availability
- * - Start / stop the codexapp HTTP server
- * - Query server status
+ * Manages the codexapp (Codex CLI web UI) lifecycle and license validation.
  */
 public class RocdexPlugin extends CordovaPlugin {
 
@@ -68,16 +69,169 @@ public class RocdexPlugin extends CordovaPlugin {
                 installCodexapp(callback);
                 return true;
 
+            case "checkLicense":
+                checkLicense(callback);
+                return true;
+
+            case "setLicense":
+                setLicense(args.optString(0, ""), callback);
+                return true;
+
+            case "getLicenseInfo":
+                getLicenseInfo(callback);
+                return true;
+
             default:
                 return false;
         }
     }
 
-    // ── Public API implementations ───────────────────────────────────────
+    // ── License Methods ─────────────────────────────────────────────────
 
     /**
-     * Check whether Node.js is available on the device.
+     * Get device fingerprint for license binding.
      */
+    private String getDeviceFingerprint() {
+        try {
+            String androidId = Settings.Secure.getString(
+                cordova.getContext().getContentResolver(),
+                Settings.Secure.ANDROID_ID
+            );
+            String packageName = cordova.getContext().getPackageName();
+            String raw = androidId + ":" + packageName + ":rocdex2026";
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] hash = digest.digest(raw.getBytes("UTF-8"));
+            StringBuilder hex = new StringBuilder();
+            for (byte b : hash) {
+                hex.append(String.format("%02x", b));
+            }
+            return hex.toString();
+        } catch (Exception e) {
+            Log.e(TAG, "Fingerprint error", e);
+            return UUID.randomUUID().toString();
+        }
+    }
+
+    /**
+     * Check if a valid license is stored.
+     */
+    private void checkLicense(final CallbackContext callback) {
+        try {
+            SharedPreferences prefs = cordova.getContext()
+                .getSharedPreferences("rocdex_license", 0);
+            String storedKey = prefs.getString("license_key", "");
+            String storedUser = prefs.getString("licensed_user", "");
+            String fingerprint = getDeviceFingerprint();
+
+            boolean valid = storedKey.equals(fingerprint) && !storedUser.isEmpty();
+
+            JSONObject result = new JSONObject();
+            result.put("valid", valid);
+            result.put("licensedUser", valid ? storedUser : "");
+            callback.success(result);
+        } catch (Exception e) {
+            try {
+                JSONObject result = new JSONObject();
+                result.put("valid", false);
+                result.put("error", e.getMessage());
+                callback.success(result);
+            } catch (JSONException je) {
+                callback.error("License check failed");
+            }
+        }
+    }
+
+    /**
+     * Set a license key and user name.
+     * License key is validated from a master secret + user identifier.
+     * Format: base64(sha256(user + ":rocdex:secret"))
+     */
+    private void setLicense(final String licenseKey, final CallbackContext callback) {
+        executor.execute(() -> {
+            try {
+                if (licenseKey == null || licenseKey.isEmpty()) {
+                    callback.error("License key cannot be empty");
+                    return;
+                }
+
+                // Validate license key format: user|signature
+                String[] parts = licenseKey.split("\\|", 2);
+                if (parts.length != 2) {
+                    callback.error("Invalid license format");
+                    return;
+                }
+
+                String user = parts[0];
+                String signature = parts[1];
+
+                // Verify signature using SHA-256
+                String raw = user + ":rocdex:secret2026";
+                MessageDigest digest = MessageDigest.getInstance("SHA-256");
+                byte[] hash = digest.digest(raw.getBytes("UTF-8"));
+                StringBuilder hex = new StringBuilder();
+                for (byte b : hash) {
+                    hex.append(String.format("%02x", b));
+                }
+                String expectedSig = hex.toString();
+
+                if (!signature.equals(expectedSig)) {
+                    JSONObject result = new JSONObject();
+                    result.put("valid", false);
+                    result.put("message", "Invalid license key");
+                    callback.success(result);
+                    return;
+                }
+
+                // Store license bound to this device
+                String fingerprint = getDeviceFingerprint();
+                SharedPreferences prefs = cordova.getContext()
+                    .getSharedPreferences("rocdex_license", 0);
+                prefs.edit()
+                    .putString("license_key", fingerprint)
+                    .putString("licensed_user", user)
+                    .putString("license_raw", licenseKey)
+                    .apply();
+
+                JSONObject result = new JSONObject();
+                result.put("valid", true);
+                result.put("licensedUser", user);
+                callback.success(result);
+            } catch (Exception e) {
+                callback.error("License activation failed: " + e.getMessage());
+            }
+        });
+    }
+
+    /**
+     * Get stored license info (without exposing the raw key).
+     */
+    private void getLicenseInfo(final CallbackContext callback) {
+        try {
+            SharedPreferences prefs = cordova.getContext()
+                .getSharedPreferences("rocdex_license", 0);
+            String storedKey = prefs.getString("license_key", "");
+            String storedUser = prefs.getString("licensed_user", "");
+            String fingerprint = getDeviceFingerprint();
+            boolean valid = storedKey.equals(fingerprint) && !storedUser.isEmpty();
+
+            JSONObject result = new JSONObject();
+            result.put("valid", valid);
+            result.put("licensedUser", valid ? storedUser : "");
+            result.put("packageName", cordova.getContext().getPackageName());
+            callback.success(result);
+        } catch (Exception e) {
+            try {
+                JSONObject result = new JSONObject();
+                result.put("valid", false);
+                callback.success(result);
+            } catch (JSONException je) {
+                callback.error(e.getMessage());
+            }
+        }
+    }
+
+    // ── Server Methods (unchanged) ──────────────────────────────────────
+
     private void checkNode(final CallbackContext callback) {
         executor.execute(() -> {
             try {
@@ -106,9 +260,6 @@ public class RocdexPlugin extends CordovaPlugin {
         });
     }
 
-    /**
-     * Start the codexapp server on the given port.
-     */
     private void startServer(final int port, final CallbackContext callback) {
         if (serverRunning) {
             callback.error("Server is already running");
@@ -128,14 +279,12 @@ public class RocdexPlugin extends CordovaPlugin {
                                 "--no-tunnel"
                         });
 
-                // Mark as running immediately so the JS side can proceed
                 serverRunning = true;
 
                 JSONObject result = new JSONObject();
                 result.put("port", serverPort);
                 callback.success(result);
 
-                // Wait for process to finish (blocks this executor thread)
                 process.waitFor();
                 Log.d(TAG, "codexapp process exited");
                 serverRunning = false;
@@ -148,9 +297,6 @@ public class RocdexPlugin extends CordovaPlugin {
         });
     }
 
-    /**
-     * Stop the running codexapp server.
-     */
     private void stopServer(final CallbackContext callback) {
         if (!serverRunning) {
             callback.error("Server is not running");
@@ -159,7 +305,6 @@ public class RocdexPlugin extends CordovaPlugin {
 
         executor.execute(() -> {
             try {
-                // Kill any running codexapp / node processes related to our server
                 Runtime.getRuntime().exec(
                         new String[]{"pkill", "-f", "codexapp.*--port " + serverPort});
 
@@ -174,15 +319,11 @@ public class RocdexPlugin extends CordovaPlugin {
         });
     }
 
-    /**
-     * Check whether the server is currently running by pinging localhost.
-     */
     private void isRunning(final CallbackContext callback) {
         executor.execute(() -> {
             try {
                 boolean alive = false;
                 if (serverRunning) {
-                    // Double-check with an HTTP probe
                     URL url = new URL("http://127.0.0.1:" + serverPort);
                     HttpURLConnection conn = (HttpURLConnection) url.openConnection();
                     conn.setConnectTimeout(2000);
@@ -209,9 +350,6 @@ public class RocdexPlugin extends CordovaPlugin {
         });
     }
 
-    /**
-     * Return the server URL.
-     */
     private void getServerUrl(final CallbackContext callback) {
         try {
             JSONObject result = new JSONObject();
@@ -222,9 +360,6 @@ public class RocdexPlugin extends CordovaPlugin {
         }
     }
 
-    /**
-     * Install / update codexapp globally via npm.
-     */
     private void installCodexapp(final CallbackContext callback) {
         executor.execute(() -> {
             try {
@@ -244,7 +379,6 @@ public class RocdexPlugin extends CordovaPlugin {
     @Override
     public void onDestroy() {
         super.onDestroy();
-        // Best-effort cleanup
         try {
             Runtime.getRuntime().exec(
                     new String[]{"pkill", "-f", "codexapp.*--port " + serverPort});

@@ -1,74 +1,68 @@
-# Acode - Code Editor for Android
+# Acode Rocdex — Code Editor for Android with Codex CLI Integration
 
 <p align="center">
   <img src='res/logo_1.png' width='250'>
 </p>
 
-[![](https://img.shields.io/endpoint?logo=telegram&label=Acode&style=flat&url=https%3A%2F%2Facode.app%2Fapi%2Ftelegram-members-count)](https://t.me/foxdebug_acode) [![](https://dcbadge.vercel.app/api/server/vVxVWYUAWD?style=flat)](https://discord.gg/vVxVWYUAWD)
+<p align="center">
+  <strong>Rocdex</strong> — A fork of Acode with Codex CLI (codexapp) integration.
+</p>
 
 ## • Overview
 
-Welcome to Acode Editor - a powerful and versatile code editing tool designed specifically for Android devices. Whether you're working on HTML, CSS, JavaScript, or other programming languages, Acode empowers you to code on-the-go with confidence.
+Acode Rocdex is a powerful, lightweight code editor and web IDE for Android, forked from [Acode](https://github.com/Acode-Foundation/Acode) with integrated [Codex CLI](https://github.com/openai/codex) web UI support via the Rocdex plugin.
 
 ## • Features
 
-- Edit and create websites, and instantly preview them in a browser.
-- Seamlessly modify source files for various languages like Python, Java, JavaScript, and more.
-- Built-in javascript console
-- Enjoy multi-language editing support with easy management tools.
-- Enjoy a large collections of community plugins to enhance your coding experience.
+- All original Acode features (edit, preview, FTP/SFTP, GitHub, 100+ languages)
+- **Rocdex Plugin** — Start/stop the Codex CLI web UI directly from the editor
+- In-app Codex interface (iframe)
+- License-based activation system
+- Optimized for paid distribution
 
 ## • Installation
 
-You can get Acode Editor from popular platforms:
+Build the APK using GitHub Actions:
 
-[<img src="https://play.google.com/intl/en_us/badges/images/generic/en-play-badge.png" alt="Get it on Google Play" height="60">](https://play.google.com/store/apps/details?id=com.foxdebug.acodefree) [<img src="https://fdroid.gitlab.io/artwork/badge/get-it-on.png" alt="Get it on F-Droid" height="60"/>](https://www.f-droid.org/packages/com.foxdebug.acode/)
+1. Push to the `main` branch
+2. Go to **Actions** → **Build APK (Rocdex)** → **Run workflow**
+3. Select `paid` as the app type
+4. Download the APK from the build artifacts
+
+## • Package Info
+
+- **Paid version:** `com.rocdebug.acode`
+- **Free version:** `com.rocdebug.acodefree`
+- **Version:** 1.12.6
+
+## • Building Locally
+
+```bash
+npm install
+cordova platform add android
+node utils/setup.js
+sh utils/scripts/build.sh paid prod
+```
+
+## • License Activation
+
+Generate license keys for users:
+
+```bash
+node utils/gen-license.js user@example.com
+```
 
 ## • Project Structure
 
 <pre>
-Acode/
+Acode Rocdex/
 |
-|- src/   - Core code and language files
-|
-|- www/   - Public documents, compiled files, and HTML templates
-|
-|- utils/ - CLI tools for building, string manipulation, and more
+|- src/           - Core code and language files
+|- www/           - Public documents, compiled files
+|- utils/         - CLI tools for building and license generation
+|- src/plugins/rocdex/ - Codex CLI integration plugin
 </pre>
 
-## • Multi-language Support
+## • Upstream
 
-Enhance Acode's capabilities by adding new languages easily. Just create a file with the language code (e.g., en-us for English) in [`src/lang/`](https://github.com/Acode-Foundation/Acode/tree/main/src/lang) and include it in [`src/lib/lang.js`](https://github.com/Acode-Foundation/Acode/blob/main/src/lib/lang.js). Manage strings across languages effortlessly using utility commands:
-
-```shell
-pnpm run lang add
-pnpm run lang remove
-pnpm run lang search
-pnpm run lang update
-```
-
-## • Contributing & Building the Application
-
-See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed instructions.
-
-## • Contributors
-
-<a href="https://github.com/Acode-Foundation/Acode/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=Acode-Foundation/Acode" />
-</a>
-
-## • Developing a Plugin for Acode
-
-For comprehensive documentation on creating plugins for Acode Editor, visit the [repository](https://github.com/Acode-Foundation/acode-plugin).
-
-For plugin development information, refer to: [Acode Plugin Documentation](https://docs.acode.app/)
-
-## Star History
-
-<a href="https://star-history.com/#Acode-Foundation/Acode&Date">
- <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=Acode-Foundation/Acode&type=Date&theme=dark" />
-   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=Acode-Foundation/Acode&type=Date" />
-   <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=Acode-Foundation/Acode&type=Date" />
- </picture>
-</a>
+This project is based on [Acode](https://github.com/Acode-Foundation/Acode) by Foxdebug.
