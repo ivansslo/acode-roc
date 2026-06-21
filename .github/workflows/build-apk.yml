@@ -1,0 +1,129 @@
+name: Build APK (Rocdex)
+
+on:
+  workflow_dispatch:
+    inputs:
+      app_type:
+        description: 'App type (free/paid)'
+        required: true
+        default: 'paid'
+        type: choice
+        options:
+          - paid
+          - free
+      build_mode:
+        description: 'Build mode (dev/prod)'
+        required: true
+        default: 'prod'
+        type: choice
+        options:
+          - dev
+          - prod
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    timeout-minutes: 60
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v7
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v5
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 'lts/*'
+          cache: 'npm'
+
+      - name: Install Gradle 8.11 (replace system Gradle 9.x)
+        run: |
+          GRADLE_VERSION="8.11"
+          wget -q "https://services.gradle.org/distributions/gradle-${GRADLE_VERSION}-bin.zip" -O /tmp/gradle.zip
+          sudo rm -rf /usr/share/gradle /usr/local/share/gradle
+          sudo unzip -q -o /tmp/gradle.zip -d /usr/local/share
+          sudo ln -sf /usr/local/share/gradle-${GRADLE_VERSION}/bin/gradle /usr/local/bin/gradle
+          echo "/usr/local/bin" >> $GITHUB_PATH
+          export PATH="/usr/local/bin:$PATH"
+          gradle --version
+
+      - name: Install Cordova CLI
+        run: npm install -g cordova
+
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Setup Cordova Platform & Plugins
+        run: |
+          rm -rf platforms/android plugins
+          cordova platform add android --no-telemetry
+          node utils/setup.js || true
+
+      - name: Fix Gradle wrapper to 8.11
+        run: |
+          WRAPPER_FILE="platforms/android/gradle/wrapper/gradle-wrapper.properties"
+          if [ -f "$WRAPPER_FILE" ]; then
+            sed -i 's|gradle-[0-9.]*-all|gradle-8.11-all|g' "$WRAPPER_FILE"
+            sed -i 's|gradle-[0-9.]*-bin|gradle-8.11-all|g' "$WRAPPER_FILE"
+            echo "Wrapper properties after fix:"
+            cat "$WRAPPER_FILE"
+          fi
+          chmod +x platforms/android/gradlew 2>/dev/null || true
+
+      - name: Generate signing keystore
+        run: |
+          keytool -genkeypair -v \
+            -keystore rocdex-release.keystore \
+            -storepass rocdex2024 \
+            -alias rocdex \
+            -keypass rocdex2024 \
+            -keyalg RSA -keysize 2048 -validity 10000 \
+            -dname "CN=Rocdex,OU=Dev,O=Rocdex,L=Jakarta,ST=ID,C=ID"
+          echo '{ "android": { "release": { "keystore": "rocdex-release.keystore", "storePassword": "rocdex2024", "alias": "rocdex", "password": "rocdex2024" } } }' > build.json
+
+      - name: Build APK
+        run: |
+          chmod +x utils/scripts/build.sh
+          sh utils/scripts/build.sh ${{ inputs.app_type || 'paid' }} ${{ inputs.build_mode || 'prod' }}
+        env:
+          TMPDIR: /tmp
+          ANDROID_HOME: /usr/local/lib/android/sdk
+
+      - name: Rename APK
+        if: success()
+        run: |
+          VERSION=$(grep -oP 'version="\K[0-9.]+' config.xml)
+          find platforms/android/app/build/outputs/apk -name "*.apk" -exec sh -c '
+            d=$(dirname "$1"); b=$(basename "$1" .apk)
+            mv "$1" "$d/acode-rocdex-v${VERSION}-${b}.apk"
+          ' _ {} \; 2>/dev/null || true
+          find platforms/android/app/build/outputs/apk -name "*.apk" -exec ls -lh {} \;
+
+      - name: Upload APK Artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: acode-rocdex-v${{ inputs.build_mode || 'prod' }}-${{ github.run_number }}
+          path: platforms/android/app/build/outputs/apk/**/*.apk
+          if-no-files-found: warn
+
+      - name: Create GitHub Release
+        if: success() && (inputs.build_mode == 'prod' || github.event_name == 'push')
+        uses: softprops/action-gh-release@v3
+        with:
+          tag_name: rocdex-v${{ github.run_number }}
+          name: "Rocdex Acode v${{ github.run_number }}"
+          files: platforms/android/app/build/outputs/apk/**/*.apk
+          prerelease: true
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
